@@ -6,12 +6,13 @@ from src.models.auth import (
     AuthSessionResponse,
     UserPublic,
 )
-from src.models.knowledge import KnowledgeDocumentOut
+from src.models.knowledge import KnowledgeDocumentOut, KnowledgeDocumentStatusUpdate
 
 __all__ = [
     "AuthLoginRequest",
     "AuthRegisterRequest",
     "AuthSessionResponse",
     "KnowledgeDocumentOut",
+    "KnowledgeDocumentStatusUpdate",
     "UserPublic",
 ]

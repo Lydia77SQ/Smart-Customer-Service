@@ -1,4 +1,4 @@
-"""知识文档上传入库与列表。失败不得 status=enabled。"""
+"""知识文档上传入库、列表与启停。失败不得 status=enabled；停用不删切片。"""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pycore.core import get_logger
 
 from src.core.config import BACKEND_ROOT, get_settings
 from src.db.models import KnowledgeDocument
-from src.models.knowledge import KnowledgeDocumentOut
+from src.models.knowledge import KnowledgeDocumentOut, KnowledgeDocumentStatus
 from src.repositories.knowledge import (
     KnowledgeChunkRepository,
     KnowledgeDocumentRepository,
@@ -24,12 +24,39 @@ _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 _MARKDOWN_SUFFIX = ".md"
 
 
+RETRIEVAL_ENABLED_STATUS = "enabled"
+_TOGGLEABLE_STATUSES = frozenset({"enabled", "disabled"})
+_NOT_FOUND_MESSAGE = "资源不存在"
+_TOGGLE_CONFLICT_MESSAGE = "未生效文档不能启停"
+
+
 class KnowledgeValidationError(Exception):
     """上传参数不合法，路由转为 400 VALIDATION_ERROR。"""
 
     def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(message)
+
+
+class KnowledgeNotFoundError(Exception):
+    """文档不存在，路由转为 404 NOT_FOUND。"""
+
+    def __init__(self, message: str = _NOT_FOUND_MESSAGE) -> None:
+        self.message = message
+        super().__init__(message)
+
+
+class KnowledgeToggleConflictError(Exception):
+    """failed / processing 不可启停，路由转为 409 CONFLICT。"""
+
+    def __init__(self, message: str = _TOGGLE_CONFLICT_MESSAGE) -> None:
+        self.message = message
+        super().__init__(message)
+
+
+def is_enabled_for_retrieval(status: str) -> bool:
+    """后续答疑（T-016 / F-004）只使用 enabled 文档；停用不删切片，但不参与检索。"""
+    return status == RETRIEVAL_ENABLED_STATUS
 
 
 def resolve_upload_dir(base_dir: Path | None = None) -> Path:
@@ -121,6 +148,27 @@ class KnowledgeService:
         rows, total = await self.documents.list_page(page=page, page_size=page_size)
         return [self.to_out(row) for row in rows], total
 
+    async def list_enabled_document_ids(self) -> list[int]:
+        """T-016 检索入口：只返回 enabled 文档 ID，disabled/failed/processing 均排除。"""
+        return await self.documents.list_enabled_ids()
+
+    async def toggle(self, document_id: int, enabled: bool) -> KnowledgeDocumentOut:
+        document = await self.documents.get_by_id(document_id)
+        if document is None:
+            raise KnowledgeNotFoundError()
+        if document.status not in _TOGGLEABLE_STATUSES:
+            raise KnowledgeToggleConflictError()
+        target: KnowledgeDocumentStatus = "enabled" if enabled else "disabled"
+        if document.status == target:
+            return self.to_out(document)
+        document = await self.documents.mark_status(document, target)
+        logger.info(
+            "知识文档启停已更新，切片与原文未删除",
+            document_id=document.id,
+            status=document.status,
+        )
+        return self.to_out(document)
+
     async def upload(self, *, filename: str | None, content: bytes) -> KnowledgeDocumentOut:
         display_name = original_filename(filename)
         if not display_name or not is_markdown_filename(display_name):
@@ -209,9 +257,13 @@ class KnowledgeService:
 
 
 __all__ = [
+    "KnowledgeNotFoundError",
     "KnowledgeService",
+    "KnowledgeToggleConflictError",
     "KnowledgeValidationError",
+    "RETRIEVAL_ENABLED_STATUS",
     "extract_qa_pairs",
+    "is_enabled_for_retrieval",
     "pack_embedding",
     "resolve_upload_dir",
     "split_chunks",

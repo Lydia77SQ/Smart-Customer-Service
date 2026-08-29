@@ -1,4 +1,4 @@
-"""知识文档资源路由。API-F012-01 上传、API-F012-02 列表。"""
+"""知识文档资源路由。API-F012-01 上传、API-F012-02 列表、API-F013-01 启停。"""
 
 from typing import Annotated
 
@@ -15,6 +15,7 @@ from src.api.deps import (
 from src.core.config import get_settings
 from src.db.models import Account
 from src.db.session import get_db
+from src.models.knowledge import KnowledgeDocumentStatusUpdate
 from src.repositories.knowledge import (
     KnowledgeChunkRepository,
     KnowledgeDocumentRepository,
@@ -66,3 +67,15 @@ async def list_knowledge_documents(
         page_size=current_size,
         total_items=total,
     )
+
+
+@router.patch("/{document_id}")
+async def patch_knowledge_document(
+    document_id: int,
+    body: KnowledgeDocumentStatusUpdate,
+    _current: Account = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """API-F013-01 整篇启用或停用。不删除切片、问答与原文。"""
+    document = await _knowledge_service(db).toggle(document_id, body.enabled)
+    return contract_success_response(document.model_dump(mode="json"))

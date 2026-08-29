@@ -2,7 +2,12 @@
 
 from src.services.auth import AccountConflictError, AuthService, InvalidCredentialsError
 from src.services.embedding import EmbeddingClient, EmbeddingError
-from src.services.knowledge import KnowledgeService, KnowledgeValidationError
+from src.services.knowledge import (
+    KnowledgeNotFoundError,
+    KnowledgeService,
+    KnowledgeToggleConflictError,
+    KnowledgeValidationError,
+)
 
 __all__ = [
     "AccountConflictError",
@@ -10,6 +15,8 @@ __all__ = [
     "EmbeddingClient",
     "EmbeddingError",
     "InvalidCredentialsError",
+    "KnowledgeNotFoundError",
     "KnowledgeService",
+    "KnowledgeToggleConflictError",
     "KnowledgeValidationError",
 ]

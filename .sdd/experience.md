@@ -96,3 +96,8 @@
 - **陷阱**：tech-spec §5.2 把 Embedding 写成 `input: string|string[]` + `parameters.dimensions`，但 `EMBEDDING_BASE_URL` 是百炼原生 URL，官方 HTTP 体是 `input.texts` + `parameters.dimension`，响应才是 `output.embeddings[].embedding`。页面拦截非 md 用原型全文「仅支持 Markdown，该文件未入库。」，后端契约文案是「仅支持 Markdown」。
 - **经验**：入库同步完成：校验 → 落盘 UPLOAD_DIR → `processing` 行 → 切片/抽 QA → httpx Embedding（`trust_env` 取 config）→ 写 chunks/qa_pairs（FTS 靠 T-008 触发器）。Key 为空或 `.env.example` 占位、或调用失败时 HTTP 200 且 `status=failed`，不得 enabled。成功路径 pytest 用 monkeypatch `EmbeddingClient.embed_texts`，禁止打真实百炼。前端 `VITE_USE_MOCK=false` 时 `knowledgeService` 已走真实 `/knowledge_documents`；`processing` 时轮询列表；失败提示「入库未生效」。分页信封用 pycore `paginated_response` 再映射为契约 `items/page/page_size/total_items`。
 - **避坑**：不要做 T-015 PATCH 启停或 T-016 答疑。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要把 `dashscope` SDK 或裸 `httpx.post` 带进代码。测试用 `tmp_path` 库 + 独立 `UPLOAD_DIR` + `dependency_overrides[get_db]`。multipart 需 `python-multipart`。本机质量门用 `.venv` 的 `python`（3.14），pytest 必须 `--timeout=300`（本任务目录）。缺 Key 不得宣称完整入库联调通过。
+
+### T-015: F-013 启用停用知识文档闭环
+- **陷阱**：AC-F013-01/02 的答疑语义依赖 T-016 员工提问流水线；本任务若去实现 Chat/Embedding/Rerank 会越界。停用若误删切片或列表过滤 `disabled`，会同时打掉 AC-F013-03。
+- **经验**：PATCH `/api/knowledge_documents/{id}` 只改 `status`（enabled⇄disabled），幂等不再写 `updated_at`。`failed`/`processing` 返回 409「未生效文档不能启停」。检索约定落在 `list_enabled_ids` / `is_enabled_for_retrieval`，供 T-016 JOIN `status='enabled'`，本任务不跑答疑。前端 `toggle` 在 `VITE_USE_MOCK=false` 时走真实 PATCH 再 GET 列表刷新标签；开关 52×32px 已在 `styles.css`。
+- **避坑**：不要实现 T-016 答疑，不要宣称百炼答疑联调通过。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。停用不得删除文档行、切片、qa_pairs 或 UPLOAD_DIR 原文。测试用 `tmp_path` + `dependency_overrides[get_db]`。本机质量门用 `.venv` 的 `python`（3.14），f013 pytest `--timeout=120`。

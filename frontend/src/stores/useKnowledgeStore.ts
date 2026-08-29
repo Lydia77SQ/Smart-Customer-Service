@@ -83,16 +83,9 @@ export const useKnowledgeStore = defineStore('knowledge', {
       this.togglingId = documentId
       this.errorMessage = ''
       try {
-        const updated = await toggleKnowledgeDocument(documentId, enabled)
-        const index = this.items.findIndex((item) => item.id === documentId)
-        if (index >= 0) {
-          this.items[index] = {
-            id: updated.id,
-            filename: updated.filename,
-            status: updated.status,
-            updated_at: updated.updated_at,
-          }
-        }
+        await toggleKnowledgeDocument(documentId, enabled)
+        const page = await listKnowledgeDocuments()
+        this.items = page.items
       } catch (error) {
         this.errorMessage = getApiErrorMessage(error)
         throw error

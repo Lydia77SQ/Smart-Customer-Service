@@ -53,6 +53,13 @@ class KnowledgeDocumentRepository:
         await self.db.refresh(document)
         return document
 
+    async def list_enabled_ids(self) -> list[int]:
+        """答疑检索只纳入 status=enabled 的文档（T-016 / F-004 约定）。"""
+        result = await self.db.execute(
+            select(KnowledgeDocument.id).where(KnowledgeDocument.status == "enabled")
+        )
+        return list(result.scalars().all())
+
     async def list_page(
         self, *, page: int, page_size: int
     ) -> tuple[list[KnowledgeDocument], int]:

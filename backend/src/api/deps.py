@@ -23,7 +23,11 @@ from src.core.security import hash_session_token
 from src.db.models import Account, Session
 from src.db.session import get_db
 from src.services.auth import AccountConflictError, InvalidCredentialsError
-from src.services.knowledge import KnowledgeValidationError
+from src.services.knowledge import (
+    KnowledgeNotFoundError,
+    KnowledgeToggleConflictError,
+    KnowledgeValidationError,
+)
 
 logger = get_logger()
 security = HTTPBearer(auto_error=False)
@@ -156,6 +160,26 @@ def register_auth_exception_handlers(app: FastAPI) -> None:
             exc.message,
             "VALIDATION_ERROR",
             status.HTTP_400_BAD_REQUEST,
+        )
+
+    @app.exception_handler(KnowledgeNotFoundError)
+    async def handle_knowledge_not_found(
+        _request: Request, exc: KnowledgeNotFoundError
+    ) -> JSONResponse:
+        return contract_error_response(
+            exc.message,
+            "NOT_FOUND",
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    @app.exception_handler(KnowledgeToggleConflictError)
+    async def handle_knowledge_toggle_conflict(
+        _request: Request, exc: KnowledgeToggleConflictError
+    ) -> JSONResponse:
+        return contract_error_response(
+            exc.message,
+            "CONFLICT",
+            status.HTTP_409_CONFLICT,
         )
 
     @app.exception_handler(RequestValidationError)

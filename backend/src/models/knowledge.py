@@ -1,4 +1,4 @@
-"""知识文档 Pydantic 模型，对齐 docs/api-contracts.md API-F012。"""
+"""知识文档 Pydantic 模型，对齐 docs/api-contracts.md API-F012 / API-F013。"""
 
 from __future__ import annotations
 
@@ -16,8 +16,14 @@ def to_iso_z(value: datetime) -> str:
     return aware.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+class KnowledgeDocumentStatusUpdate(BaseModel):
+    """API-F013-01 PATCH 入参。"""
+
+    enabled: bool
+
+
 class KnowledgeDocumentOut(BaseModel):
-    """上传 / 列表条目的契约 DTO；不含 storage_path。"""
+    """上传 / 列表 / 启停响应的契约 DTO；不含 storage_path。"""
 
     model_config = ConfigDict(from_attributes=True)
 

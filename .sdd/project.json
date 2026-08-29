@@ -3,7 +3,7 @@
   "name": "智能客服系统",
   "project_type": "web",
   "source": "new",
-  "repo_url": null,
+  "repo_url": "git@github.com:Lydia77SQ/Smart-Customer-Service.git",
   "created_at": "2026-08-29 11:45:56",
   "last_active": "2026-08-29 11:45:56",
   "harness_version": "V7_2"

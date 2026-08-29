@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>员工咨询 · 智能客服系统</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600&display=swap" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">智能客服系统</div>
+      <nav class="nav">
+        <a class="is-active" href="./employee.html">员工咨询</a>
+        <a href="./agent.html">坐席接待</a>
+        <a href="./knowledge.html">知识维护</a>
+      </nav>
+      <div class="topbar-right">王丽<a class="btn-secondary btn" href="./login.html" style="height:32px">退出</a></div>
+    </header>
+    <div class="shell">
+      <aside class="sidebar">
+        <h2>我的咨询</h2>
+        <div class="show-loading">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+        <div class="empty show-empty">还没有咨询。点下方新咨询开始提问。</div>
+        <div class="list hide-empty hide-loading">
+          <button class="item is-active hide-closed" type="button">
+            <span class="title"><span class="dot dot-doing"></span>VPN 连不上公司内网</span>
+            <span class="meta">处理中 · 今天 14:12</span>
+          </button>
+          <button class="item" type="button">
+            <span class="title"><span class="dot dot-done"></span>工牌补办要找谁</span>
+            <span class="meta">已完结 · 昨天 09:40</span>
+          </button>
+        </div>
+        <div style="padding:12px 16px">
+          <button class="btn" type="button" style="width:100%">新咨询</button>
+        </div>
+      </aside>
+      <section class="main hide-empty hide-loading">
+        <div class="status-bar hide-closed">处理中 · 已转人工，等待对接人回复</div>
+        <div class="status-bar show-closed" style="display:none;background:#71717a">已完结 · 不能再发送消息</div>
+        <div class="thread hide-closed hide-degraded" id="thread-default">
+          <div class="bubble bubble-me"><div class="who">我</div>公司 VPN 连不上，提示认证失败。</div>
+          <div class="bubble bubble-sys"><div class="who">系统</div>请补充你用的是 Windows 还是 Mac，以及大约从什么时候开始失败。</div>
+          <div class="bubble bubble-me"><div class="who">我</div>Windows。今天早上开始的。</div>
+          <div class="bubble bubble-agent"><div class="who">坐席</div>已为你重置了 VPN 口令，请用邮件里的新密码再试。</div>
+        </div>
+        <div class="thread show-degraded" style="display:none">
+          <div class="bubble bubble-me"><div class="who">我</div>打印机无法连接。</div>
+          <div class="bubble bubble-sys"><div class="who">系统</div>暂时无法自动答疑，请稍后再试，或转人工等待对接人。</div>
+        </div>
+        <div class="thread show-closed" style="display:none">
+          <div class="bubble bubble-me"><div class="who">我</div>工牌丢了，补办要找谁？</div>
+          <div class="bubble bubble-sys"><div class="who">系统</div>请到行政前台提交补办申请，携带身份证复印件。</div>
+        </div>
+        <div class="composer">
+          <textarea class="input" id="composer" placeholder="描述你的 IT 或行政问题"></textarea>
+          <button class="btn btn-secondary" id="btn-transfer" type="button">转人工</button>
+          <button class="btn" id="btn-send" type="button">发送</button>
+        </div>
+      </section>
+      <section class="main show-empty" style="display:none">
+        <div class="empty">选择一条咨询，或点「新咨询」开始提问。</div>
+      </section>
+    </div>
+  </div>
+  <script>
+    const state = new URLSearchParams(location.search).get("state") || "default";
+    document.body.dataset.state = state;
+    const closed = state === "closed";
+    const transfer = document.getElementById("btn-transfer");
+    const send = document.getElementById("btn-send");
+    const box = document.getElementById("composer");
+    if (state === "ai") {
+      document.querySelector(".status-bar.hide-closed").textContent = "AI 接待中 · 可继续提问或转人工";
+      transfer.disabled = false;
+      const thread = document.getElementById("thread-default");
+      thread.innerHTML = '<div class="bubble bubble-me"><div class="who">我</div>公司 VPN 连不上，提示认证失败。</div><div class="bubble bubble-sys"><div class="who">系统</div>请补充你用的是 Windows 还是 Mac，以及大约从什么时候开始失败。</div>';
+    } else if (closed || state === "default") {
+      transfer.disabled = true;
+      transfer.classList.add("is-disabled");
+    }
+    if (closed) {
+      send.disabled = true;
+      box.disabled = true;
+      box.placeholder = "已完结，不能再发送";
+    }
+  </script>
+</body>
+</html>

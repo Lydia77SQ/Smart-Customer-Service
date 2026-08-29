@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>登录与注册 · 智能客服系统</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600&display=swap" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="auth">
+    <section class="card">
+      <h1>智能客服系统</h1>
+      <p class="hint">内部 IT / 行政支持</p>
+      <div class="tabs" role="tablist">
+        <button type="button" id="tab-login" class="is-active">登录</button>
+        <button type="button" id="tab-register">注册</button>
+      </div>
+      <div class="alert alert-error show-error">账号或密码不正确</div>
+      <div class="alert alert-error show-need-login">请先登录后再进入工作台</div>
+      <div class="alert alert-error show-conflict">该账号名已被占用</div>
+      <div class="alert alert-ok show-ok">账号已创建，请使用该凭证登录</div>
+      <form id="form-login">
+        <label class="field"><span>账号</span><input class="input" name="account" value="wang.li" autocomplete="username" /></label>
+        <label class="field"><span>密码</span><input class="input" name="password" type="password" value="••••••••" autocomplete="current-password" /></label>
+        <button class="btn" type="submit" id="btn-login" style="width:100%">登录</button>
+      </form>
+      <form id="form-register" hidden>
+        <label class="field"><span>账号</span><input class="input" name="new-account" placeholder="请输入账号" /></label>
+        <label class="field"><span>密码</span><input class="input" name="new-password" type="password" placeholder="请输入密码" /></label>
+        <button class="btn" type="submit" style="width:100%">创建账号</button>
+      </form>
+    </section>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const state = params.get("state") || "default";
+    document.body.dataset.state = state;
+    const loginForm = document.getElementById("form-login");
+    const registerForm = document.getElementById("form-register");
+    const tabLogin = document.getElementById("tab-login");
+    const tabRegister = document.getElementById("tab-register");
+    function showRegister() {
+      loginForm.hidden = true;
+      registerForm.hidden = false;
+      tabLogin.classList.remove("is-active");
+      tabRegister.classList.add("is-active");
+    }
+    function showLogin() {
+      loginForm.hidden = false;
+      registerForm.hidden = true;
+      tabRegister.classList.remove("is-active");
+      tabLogin.classList.add("is-active");
+    }
+    tabLogin.onclick = showLogin;
+    tabRegister.onclick = showRegister;
+    if (state === "register" || state === "conflict" || state === "ok") showRegister();
+    if (state === "loading") {
+      const btn = document.getElementById("btn-login");
+      btn.disabled = true;
+      btn.textContent = "登录中";
+    }
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (state === "error") return;
+      location.href = "./employee.html";
+    });
+    registerForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (state === "conflict") return;
+      location.href = "./login.html?state=ok";
+    });
+  </script>
+</body>
+</html>

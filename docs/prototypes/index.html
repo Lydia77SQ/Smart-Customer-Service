@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>原型入口 · 智能客服系统</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600&display=swap" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="proto-index">
+    <h1>智能客服系统原型</h1>
+    <p class="hint">从登录走到三端工作台。下列为页面 × 状态；主路径请先打开「登录默认」。设计取值见页底。</p>
+    <h2>主路径</h2>
+    <div class="grid-4">
+      <a href="./login.html">登录默认<span class="k">F-001 进入系统</span></a>
+      <a href="./employee.html">员工咨询<span class="k">F-003～F-006</span></a>
+      <a href="./agent.html">坐席接待<span class="k">F-007～F-011</span></a>
+      <a href="./knowledge.html">知识维护<span class="k">F-012～F-013</span></a>
+    </div>
+    <h2>登录与注册</h2>
+    <div class="grid-3">
+      <a href="./login.html">默认登录</a>
+      <a href="./login.html?state=error">密码错误</a>
+      <a href="./login.html?state=need-login">未登录拦截</a>
+      <a href="./login.html?state=loading">登录中</a>
+      <a href="./login.html?state=register">注册</a>
+      <a href="./login.html?state=conflict">账号名冲突</a>
+      <a href="./login.html?state=ok">注册成功</a>
+    </div>
+    <h2>员工咨询</h2>
+    <div class="grid-3">
+      <a href="./employee.html">默认 · 处理中可看对话</a>
+      <a href="./employee.html?state=empty">空列表</a>
+      <a href="./employee.html?state=loading">加载中</a>
+      <a href="./employee.html?state=closed">已完结只读</a>
+      <a href="./employee.html?state=degraded">无法自动答疑</a>
+      <a href="./employee.html?state=ai">AI 接待中可转人工</a>
+    </div>
+    <h2>坐席接待</h2>
+    <div class="grid-3">
+      <a href="./agent.html">默认 · 待处理未接入</a>
+      <a href="./agent.html?state=doing">已接入可回复</a>
+      <a href="./agent.html?state=empty">空队列</a>
+      <a href="./agent.html?state=loading">加载中</a>
+      <a href="./agent.html?state=closed">已完结</a>
+      <a href="./agent.html?state=error">智能回答失败</a>
+    </div>
+    <h2>知识维护</h2>
+    <div class="grid-3">
+      <a href="./knowledge.html">默认列表含已停用行</a>
+      <a href="./knowledge.html?state=empty">空列表</a>
+      <a href="./knowledge.html?state=loading">加载中</a>
+      <a href="./knowledge.html?state=error">非 Markdown 拒绝</a>
+    </div>
+
+    <h2>设计取值表</h2>
+    <table>
+      <thead><tr><th>用途</th><th>取值</th></tr></thead>
+      <tbody>
+        <tr><td>正文色</td><td>#18181B</td></tr>
+        <tr><td>主色</td><td>#2563EB</td></tr>
+        <tr><td>主色浅底</td><td>#EFF6FF</td></tr>
+        <tr><td>页面底</td><td>#F4F4F5</td></tr>
+        <tr><td>面板</td><td>#FFFFFF</td></tr>
+        <tr><td>分割线</td><td>#E4E4E7</td></tr>
+        <tr><td>次要文字</td><td>#71717A</td></tr>
+        <tr><td>成功 / 警告 / 危险 / 完结</td><td>#059669 / #D97706 / #DC2626 / #A1A1AA</td></tr>
+        <tr><td>状态条</td><td>#1D4ED8 底、白字</td></tr>
+        <tr><td>标题 / 正文</td><td>Outfit -0.04em / Inter</td></tr>
+        <tr><td>字号</td><td>标题 24px · 区块 16px · 正文 14px · 说明 12px</td></tr>
+        <tr><td>间距</td><td>8 / 16 / 24 / 32px；登录密码栏与主按钮额外再隔 16px</td></tr>
+        <tr><td>圆角</td><td>8px（不超过 12px）</td></tr>
+        <tr><td>知识启停开关</td><td>52×32px，圆角 8px</td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

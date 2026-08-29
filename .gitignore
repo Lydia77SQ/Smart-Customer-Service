@@ -34,3 +34,6 @@ frontend/.env
 frontend/.env.local
 backend/.env
 backend/.env.local
+
+# SQLite 业务库与上传落盘（本地生成，不入库）
+backend/data/

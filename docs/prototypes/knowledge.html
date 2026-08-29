@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>知识维护 · 智能客服系统</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600&display=swap" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">智能客服系统</div>
+      <nav class="nav">
+        <a href="./employee.html">员工咨询</a>
+        <a href="./agent.html">坐席接待</a>
+        <a class="is-active" href="./knowledge.html">知识维护</a>
+      </nav>
+      <div class="topbar-right">王丽<a class="btn-secondary btn" href="./login.html" style="height:32px">退出</a></div>
+    </header>
+    <div class="main" style="flex:1">
+      <div class="toolbar">
+        <button class="btn" type="button">上传 Markdown</button>
+        <span class="hint" style="margin:0">仅支持 .md</span>
+      </div>
+      <div class="alert alert-error show-error" style="margin:16px">仅支持 Markdown，该文件未入库。</div>
+      <div class="show-loading">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+      <div class="empty show-empty">还没有知识文档。请上传 Markdown。</div>
+      <div class="table-wrap hide-empty hide-loading">
+        <table>
+          <thead>
+            <tr><th>文档名称</th><th>状态</th><th>更新时间</th><th>启用</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>VPN 接入说明.md</td>
+              <td><span class="tag tag-on">启用</span></td>
+              <td>2026-08-28 18:20</td>
+              <td><label class="switch"><input type="checkbox" checked /><span class="slider"></span></label></td>
+            </tr>
+            <tr>
+              <td>工牌补办流程.md</td>
+              <td><span class="tag tag-off">已停用</span></td>
+              <td>2026-08-27 11:05</td>
+              <td><label class="switch"><input type="checkbox" /><span class="slider"></span></label></td>
+            </tr>
+            <tr>
+              <td>会议室预约须知.md</td>
+              <td><span class="tag tag-on">启用</span></td>
+              <td>2026-08-26 09:12</td>
+              <td><label class="switch"><input type="checkbox" checked /><span class="slider"></span></label></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.body.dataset.state = new URLSearchParams(location.search).get("state") || "default";
+  </script>
+</body>
+</html>

@@ -28,6 +28,7 @@ from src.services.knowledge import (
     KnowledgeToggleConflictError,
     KnowledgeValidationError,
 )
+from src.services.ticket import TicketConflictError, TicketNotFoundError, TicketValidationError
 
 logger = get_logger()
 security = HTTPBearer(auto_error=False)
@@ -175,6 +176,36 @@ def register_auth_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(KnowledgeToggleConflictError)
     async def handle_knowledge_toggle_conflict(
         _request: Request, exc: KnowledgeToggleConflictError
+    ) -> JSONResponse:
+        return contract_error_response(
+            exc.message,
+            "CONFLICT",
+            status.HTTP_409_CONFLICT,
+        )
+
+    @app.exception_handler(TicketValidationError)
+    async def handle_ticket_validation(
+        _request: Request, exc: TicketValidationError
+    ) -> JSONResponse:
+        return contract_error_response(
+            exc.message,
+            "VALIDATION_ERROR",
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    @app.exception_handler(TicketNotFoundError)
+    async def handle_ticket_not_found(
+        _request: Request, exc: TicketNotFoundError
+    ) -> JSONResponse:
+        return contract_error_response(
+            exc.message,
+            "NOT_FOUND",
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    @app.exception_handler(TicketConflictError)
+    async def handle_ticket_conflict(
+        _request: Request, exc: TicketConflictError
     ) -> JSONResponse:
         return contract_error_response(
             exc.message,

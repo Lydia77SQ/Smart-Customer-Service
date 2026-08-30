@@ -101,3 +101,34 @@
 - **陷阱**：AC-F013-01/02 的答疑语义依赖 T-016 员工提问流水线；本任务若去实现 Chat/Embedding/Rerank 会越界。停用若误删切片或列表过滤 `disabled`，会同时打掉 AC-F013-03。
 - **经验**：PATCH `/api/knowledge_documents/{id}` 只改 `status`（enabled⇄disabled），幂等不再写 `updated_at`。`failed`/`processing` 返回 409「未生效文档不能启停」。检索约定落在 `list_enabled_ids` / `is_enabled_for_retrieval`，供 T-016 JOIN `status='enabled'`，本任务不跑答疑。前端 `toggle` 在 `VITE_USE_MOCK=false` 时走真实 PATCH 再 GET 列表刷新标签；开关 52×32px 已在 `styles.css`。
 - **避坑**：不要实现 T-016 答疑，不要宣称百炼答疑联调通过。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。停用不得删除文档行、切片、qa_pairs 或 UPLOAD_DIR 原文。测试用 `tmp_path` + `dependency_overrides[get_db]`。本机质量门用 `.venv` 的 `python`（3.14），f013 pytest `--timeout=120`。
+
+### T-016: F-004 员工提问答疑闭环
+- **陷阱**：百炼 Chat Completions（`LLM_BASE_URL` + `/chat/completions`）真实响应是 OpenAI 兼容体（顶层 `choices[0].message.content`），不是原生 `output.text`。配置中的 Rerank 模型对当前账号可能返回业务失败（HTTP 非 200），生成路径必须降级为 `DEGRADED_QA_MESSAGE`，不能假装已重排成功。
+- **经验**：答疑只 JOIN `knowledge_documents.status='enabled'`（复用 T-015 `list_enabled_ids` / `is_enabled_for_retrieval`）。标准问答余弦 ≥ `QA_SIMILARITY_THRESHOLD` 则直出且不调 LLM。pytest 成功路径 monkeypatch `EmbeddingClient.embed_texts` / `LlmClient.complete` / `RerankClient.rerank`；真实 Chat 结构已确认（`key_configured=True`），默认用例不得打真实百炼。`POST /api/tickets/messages` 响应已含工单与气泡；`GET /mine` 与 `GET /{id}` 仅本人工单最小接入，供列表刷新，不做 T-017 续聊扩张。前端 `ticketService.ts` 在 `VITE_USE_MOCK=false` 时走真实 POST；store 用 `qa_result_type` 对应的 `system_message` 展示气泡。
+- **避坑**：禁止 dashscope SDK；httpx `trust_env=False`。不要把 Key、响应全文或 `sk-` 写入 `.sdd`。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要做转人工。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机质量门用 `.venv` 的 `python`，f004 pytest `--timeout=300`。
+
+### T-017: F-005 查看续聊闭环
+- **陷阱**：`GET /mine` 列表 DTO 没有 `requester_id`，隔离只能在后端按 `requester_id == 当前用户` 过滤；测试必须先写入他人工单才能证明列表/详情/续发都看不到。已完结前端禁用输入后，仍要有后端 409「已完结，不能再发送」兜底。
+- **经验**：T-016 已有 mine/detail/messages。本任务补齐双账号隔离、同一 `ticket_id` 续聊、closed 拒发。`pending`/`in_progress` 续发 `qa_result_type=none` 且不写系统气泡。员工页打开详情再核对 `requester.id`。`VITE_USE_MOCK=false` 时 `listMyTickets`/`getTicket`/`sendEmployeeMessage` 走真实 API。续聊若仍为 `ai_assisting` 会走 F-004 流水线，pytest monkeypatch `QaPipeline.run`，不测答疑语义。
+- **避坑**：不要做转人工/坐席接入。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要宣称百炼答疑完整联调。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机质量门用 `.venv` 的 `python`，f005 pytest `--timeout=120`。
+
+### T-018: F-006 员工转人工闭环
+- **陷阱**：`GET /api/tickets/agent-queue` 必须写在 `GET /{ticket_id}` 之前，否则 FastAPI 会把 `agent-queue` 当成 int 路径参数变成 400。坐席队列可见性看的是 `status=pending|in_progress`，不是 requester；从未转人工的 `ai_assisting` 即使属于当前登录人也不能进队列。
+- **经验**：转人工只允许 requester 且 `ai_assisting`→`pending`，写入 `TRANSFER_SUCCESS_MESSAGE` 系统消息；`closed` 返回 409「已完结，不能转人工」且不插消息；`pending`/`in_progress` 返回 409「已在人工流程中」。详情对非发起人隐藏 `ai_assisting`（BR-006），已转人工单可供坐席点开上下文，但不做接入。`VITE_USE_MOCK=false` 时 `transferTicket` / `listAgentQueue` 已走真实 API；员工页仅 `ai_assisting` 可点转人工，状态条用「待处理 · 已提交，等待对接人」。
+- **避坑**：不要实现坐席接入/回复/结单（T-019+）。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要宣称百炼答疑完整联调。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机质量门用 `.venv` 的 `python`，f006 pytest `--timeout=120`。
+
+### T-019: F-007 坐席接入工单闭环
+- **陷阱**：接入冲突文案是「当前状态不可接入」，不要复用转人工的「已完结，不能转人工」或发消息的「已完结，不能再发送」。已 `in_progress` 再接入是 200 幂等，不能再 `touch` 改 `updated_at`。
+- **经验**：复用 T-018 的 `GET /agent-queue`（仍须写在 `GET /{id}` 之前）。`POST /{id}/accept` 只把 `pending`→`in_progress`，不写系统消息。员工续发仍走 T-017 的 `pending`/`in_progress` 分支：`qa_result_type=none` 且 `system_message=null`。他人工单 `ai_assisting` 对外 404（BR-006）；发起人自己接入 AI 单才是 409。前端 `acceptTicket` 在 `VITE_USE_MOCK=false` 时已打真实 `/tickets/{id}/accept`；接入成功后切到「处理中」并保留当前详情，避免待处理列表把当前单滤掉。
+- **避坑**：不要实现坐席回复/建议/分类/结单（T-020+）。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要宣称百炼答疑完整联调。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机质量门用 `.venv` 的 `python`，f007 pytest `--timeout=120`。
+
+### T-020: F-008 坐席回复闭环
+- **陷阱**：完结拒发文案是「已完结，不能再发送」，与转人工「已完结，不能转人工」、接入「当前状态不可接入」不是同一句。待处理拒发是「请先接入后再回复」。T-008 建表测试在 `backend/tests/test_db_schema.py`，不要写进或覆盖 `features/f008/`。
+- **经验**：`POST /{id}/agent-replies` 只允许 `in_progress`，写入 `sender_type=agent` 的 messages 并 `touch` 工单。详情只读 messages，不 JOIN suggestions；AC-F008-03 用夹具造 suggestions 行即可，不要实现获取建议 API。`GET /agent-queue` 仍须写在 `GET /{id}` 之前。`VITE_USE_MOCK=false` 时 `sendAgentReply` 已打真实 `/tickets/{id}/agent-replies`；员工刷新 `GET /{id}` 可见 agent 气泡。坐席页完结输入禁用，store 另做 409 文案兜底。
+- **避坑**：不要实现智能建议生成/分类/结单（T-021+）。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要宣称百炼答疑完整联调。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机质量门用 `.venv` 的 `python`，f008 pytest `--timeout=120`。
+
+### T-021: F-009 坐席智能建议闭环
+- **陷阱**：qa_pipeline 降级默认返回 `DEGRADED_QA_MESSAGE`（员工答疑口径）。坐席建议必须换成 `DEGRADED_SUGGESTION_MESSAGE`，否则右栏失败说明会对不上原型。画像要用工单发起人 `requester.profile_json`，不能用当前坐席账号。
+- **经验**：复用 T-016 `QaPipeline.run`，结果只插入 `suggestions`，不写 `messages`、不 `touch` 工单、不改画像。成功路径 pytest monkeypatch `QaPipeline.run`；降级路径 monkeypatch `EmbeddingClient.embed_texts` 抛错，再断言 `result_type=degraded` 且员工详情消息条数不变。`GET /agent-queue` 仍须写在 `GET /{id}` 之前。前端 `createSuggestion` / `fetchSuggestion` 在 `VITE_USE_MOCK=false` 时已打真实 `POST /tickets/{id}/suggestions`；建议只渲染右栏，`填入输入框` 不自动发送。Key 已配置于 `backend/.env`，`key_configured=True`。
+- **避坑**：不要实现分类/结单（T-022+），不要推倒重写答疑流水线。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要宣称 Chat/Embedding/Rerank 全路径完整联调通过。禁止 dashscope SDK；httpx `trust_env=False`。日志/报告只写 `key_configured=True`，禁止密钥片段。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机质量门用 `.venv` 的 `python`，f009 pytest `--timeout=300`。
+

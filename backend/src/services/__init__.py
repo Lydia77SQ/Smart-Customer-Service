@@ -8,6 +8,15 @@ from src.services.knowledge import (
     KnowledgeToggleConflictError,
     KnowledgeValidationError,
 )
+from src.services.llm import LlmClient, LlmError
+from src.services.qa_pipeline import QaPipeline
+from src.services.rerank import RerankClient, RerankError
+from src.services.ticket import (
+    TicketConflictError,
+    TicketNotFoundError,
+    TicketService,
+    TicketValidationError,
+)
 
 __all__ = [
     "AccountConflictError",
@@ -19,4 +28,13 @@ __all__ = [
     "KnowledgeService",
     "KnowledgeToggleConflictError",
     "KnowledgeValidationError",
+    "LlmClient",
+    "LlmError",
+    "QaPipeline",
+    "RerankClient",
+    "RerankError",
+    "TicketConflictError",
+    "TicketNotFoundError",
+    "TicketService",
+    "TicketValidationError",
 ]

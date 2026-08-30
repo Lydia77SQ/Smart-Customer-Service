@@ -60,7 +60,11 @@ function bubbleClass(sender: MessageSenderType): string {
 
 async function openTicket(ticketId: number) {
   draft.value = ''
-  await ticketStore.openTicket(ticketId)
+  try {
+    await ticketStore.openTicket(ticketId)
+  } catch {
+    /* 错误文案由 store.errorMessage 展示 */
+  }
 }
 
 function onNewConsult() {
@@ -81,7 +85,11 @@ async function onSend() {
 
 async function onTransfer() {
   if (!canTransfer.value) return
-  await ticketStore.transfer()
+  try {
+    await ticketStore.transfer()
+  } catch {
+    /* 错误文案由 store.errorMessage 展示 */
+  }
 }
 
 watch(
@@ -168,12 +176,21 @@ onMounted(async () => {
           <button
             class="btn btn-secondary"
             type="button"
-            :disabled="!canTransfer || ticketStore.transferring"
+            :class="{ 'is-disabled': isClosed || !canTransfer }"
+            :disabled="isClosed || !canTransfer || ticketStore.transferring"
             @click="onTransfer"
           >
             转人工
           </button>
-          <button class="btn" type="button" :disabled="!canSend" @click="onSend">发送</button>
+          <button
+            class="btn"
+            type="button"
+            :class="{ 'is-disabled': isClosed }"
+            :disabled="isClosed || !canSend"
+            @click="onSend"
+          >
+            发送
+          </button>
         </div>
       </section>
       <section v-else class="main">

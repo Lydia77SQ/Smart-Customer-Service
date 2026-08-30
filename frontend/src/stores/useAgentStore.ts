@@ -79,17 +79,19 @@ export const useAgentStore = defineStore('agent', {
       try {
         this.detail = await acceptTicket(this.detail.id)
         this.queueStatus = 'in_progress'
-        this.queueItems = [
-          {
-            id: this.detail.id,
-            title: this.detail.title,
-            status: 'in_progress',
-            requester: this.detail.requester,
-            waiting_minutes: 0,
-            updated_at: this.detail.updated_at,
-          },
-        ]
+        const accepted: AgentTicketSummary = {
+          id: this.detail.id,
+          title: this.detail.title,
+          status: 'in_progress',
+          requester: this.detail.requester,
+          waiting_minutes: 0,
+          updated_at: this.detail.updated_at,
+        }
+        this.queueItems = [accepted]
         await this.loadQueue({ showLoading: false })
+        if (!this.queueItems.some((item) => item.id === accepted.id)) {
+          this.queueItems = [accepted, ...this.queueItems]
+        }
       } catch (error) {
         this.errorMessage = getApiErrorMessage(error)
         throw error
@@ -99,6 +101,14 @@ export const useAgentStore = defineStore('agent', {
     },
     async send(content: string) {
       if (!this.detail) return
+      if (this.detail.status === 'closed') {
+        this.errorMessage = '已完结，不能再发送'
+        throw new Error('已完结，不能再发送')
+      }
+      if (this.detail.status !== 'in_progress') {
+        this.errorMessage = '请先接入后再回复'
+        throw new Error('请先接入后再回复')
+      }
       this.sending = true
       this.errorMessage = ''
       try {

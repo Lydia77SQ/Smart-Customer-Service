@@ -277,7 +277,9 @@ onMounted(async () => {
             >
               {{ agentStore.suggestion.content }}
             </div>
-            <p v-if="agentStore.suggestionFailed" class="hint">{{ SUGGEST_FAIL_TEXT }}</p>
+            <p v-if="agentStore.suggestionFailed" class="hint">
+              {{ agentStore.suggestion?.content ?? SUGGEST_FAIL_TEXT }}
+            </p>
             <button
               class="btn btn-secondary"
               type="button"

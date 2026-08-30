@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import KnowledgeChunk, KnowledgeDocument, QaPair, utc_now
+
+_FTS_TOKEN_RE = re.compile(r"[\w\u4e00-\u9fff]+")
 
 
 class KnowledgeDocumentRepository:
@@ -98,6 +102,39 @@ class KnowledgeChunkRepository:
         await self.db.flush()
         return rows
 
+    async def list_enabled(self) -> list[KnowledgeChunk]:
+        """仅 status=enabled 文档的切片，供答疑混合检索。"""
+        result = await self.db.execute(
+            select(KnowledgeChunk)
+            .join(KnowledgeDocument, KnowledgeDocument.id == KnowledgeChunk.document_id)
+            .where(KnowledgeDocument.status == "enabled")
+        )
+        return list(result.scalars().all())
+
+    async def search_fts_ids(self, query: str, *, top_k: int) -> list[int]:
+        """FTS5 关键词召回，JOIN 后只保留 enabled 文档切片。"""
+        fts_query = _sanitize_fts_query(query)
+        if not fts_query:
+            return []
+        try:
+            result = await self.db.execute(
+                text(
+                    """
+                    SELECT kc.id
+                    FROM knowledge_chunks_fts AS fts
+                    JOIN knowledge_chunks AS kc ON kc.id = fts.chunk_id
+                    JOIN knowledge_documents AS kd ON kd.id = kc.document_id
+                    WHERE kd.status = 'enabled'
+                      AND fts MATCH :q
+                    LIMIT :k
+                    """
+                ),
+                {"q": fts_query, "k": top_k},
+            )
+        except SQLAlchemyError:
+            return []
+        return [int(row[0]) for row in result.all()]
+
 
 class QaPairRepository:
     def __init__(self, db: AsyncSession) -> None:
@@ -121,3 +158,19 @@ class QaPairRepository:
             rows.append(row)
         await self.db.flush()
         return rows
+
+    async def list_enabled(self) -> list[QaPair]:
+        """仅 status=enabled 文档的标准问答，供高置信直出。"""
+        result = await self.db.execute(
+            select(QaPair)
+            .join(KnowledgeDocument, KnowledgeDocument.id == QaPair.document_id)
+            .where(KnowledgeDocument.status == "enabled")
+        )
+        return list(result.scalars().all())
+
+
+def _sanitize_fts_query(raw: str) -> str:
+    tokens = _FTS_TOKEN_RE.findall(raw)
+    if not tokens:
+        return ""
+    return " OR ".join(f'"{token}"' for token in tokens[:8])

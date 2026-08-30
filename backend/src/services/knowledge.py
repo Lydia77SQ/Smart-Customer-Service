@@ -74,6 +74,15 @@ def pack_embedding(values: list[float]) -> bytes:
     return struct.pack(f"<{len(values)}f", *values)
 
 
+def unpack_embedding(blob: bytes | None) -> list[float] | None:
+    if not blob:
+        return None
+    if len(blob) % 4 != 0:
+        return None
+    count = len(blob) // 4
+    return list(struct.unpack(f"<{count}f", blob))
+
+
 def split_chunks(text: str, chunk_size: int, overlap: int) -> list[str]:
     stripped = text.strip()
     if not stripped:
@@ -267,4 +276,5 @@ __all__ = [
     "pack_embedding",
     "resolve_upload_dir",
     "split_chunks",
+    "unpack_embedding",
 ]

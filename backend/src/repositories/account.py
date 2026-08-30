@@ -13,9 +13,19 @@ class AccountRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
+    async def get_by_id(self, account_id: int) -> Account | None:
+        result = await self.db.execute(select(Account).where(Account.id == account_id))
+        return result.scalar_one_or_none()
+
     async def get_by_account(self, account: str) -> Account | None:
         result = await self.db.execute(select(Account).where(Account.account == account))
         return result.scalar_one_or_none()
+
+    async def update_profile_json(self, account: Account, profile_json: str) -> Account:
+        account.profile_json = profile_json
+        await self.db.flush()
+        await self.db.refresh(account)
+        return account
 
     async def create(
         self,

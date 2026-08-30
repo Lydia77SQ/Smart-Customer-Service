@@ -1,4 +1,4 @@
-"""咨询工单资源路由。API-F004 发消息；API-F005 列表详情；API-F006 转人工；API-F007 队列与接入；API-F008 坐席回复；API-F009 智能建议。"""
+"""咨询工单资源路由。API-F004 发消息；API-F005 列表详情；API-F006 转人工；API-F007 队列与接入；API-F008 坐席回复；API-F009 智能建议；API-F010 分类。"""
 
 from typing import Annotated, Literal
 
@@ -15,7 +15,12 @@ from src.api.deps import (
 from src.core.config import get_settings
 from src.db.models import Account
 from src.db.session import get_db
-from src.models.ticket import AgentReplyCreate, EmployeeMessageCreate, SuggestionCreate
+from src.models.ticket import (
+    AgentReplyCreate,
+    EmployeeMessageCreate,
+    SuggestionCreate,
+    TicketCategoryUpdate,
+)
 from src.services.ticket import TicketService
 
 router = APIRouter(prefix="/api/tickets", tags=["tickets"])
@@ -146,6 +151,22 @@ async def create_suggestion(
         focus_message_id=body.focus_message_id,
     )
     return contract_success_response(suggestion.model_dump(mode="json"))
+
+
+@router.put("/{ticket_id}/category")
+async def update_ticket_category(
+    ticket_id: int,
+    body: TicketCategoryUpdate,
+    current: Account = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """API-F010-01：为未完结工单写入分类；已完结 CONFLICT。"""
+    summary = await _ticket_service(db).update_category(
+        current,
+        ticket_id,
+        category=body.category,
+    )
+    return contract_success_response(summary.model_dump(mode="json"))
 
 
 @router.get("/{ticket_id}")

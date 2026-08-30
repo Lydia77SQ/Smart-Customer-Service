@@ -15,6 +15,7 @@ from src.models.ticket import (
     MessageOut,
     SuggestionCreate,
     SuggestionOut,
+    TicketCategoryUpdate,
     TicketDetail,
     TicketSummary,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "MessageOut",
     "SuggestionCreate",
     "SuggestionOut",
+    "TicketCategoryUpdate",
     "TicketDetail",
     "TicketSummary",
     "UserPublic",

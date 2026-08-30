@@ -1,4 +1,4 @@
-"""咨询工单 Pydantic 模型，对齐 docs/api-contracts.md API-F004～API-F009。"""
+"""咨询工单 Pydantic 模型，对齐 docs/api-contracts.md API-F004～API-F010。"""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ _settings = get_settings()
 
 TicketStatus = Literal["ai_assisting", "pending", "in_progress", "closed"]
 AgentQueueStatus = Literal["pending", "in_progress"]
+TicketCategory = Literal["IT-网络", "IT-账号", "行政-工牌", "行政-场地"]
 MessageSenderType = Literal["employee", "system", "agent"]
 QaResultType = Literal[
     "direct_answer",
@@ -56,6 +57,12 @@ class SuggestionCreate(BaseModel):
     focus_message_id: int | None = None
 
 
+class TicketCategoryUpdate(BaseModel):
+    """PUT /api/tickets/{ticket_id}/category 请求体。"""
+
+    category: TicketCategory
+
+
 class SuggestionOut(BaseModel):
     """智能回答建议出参，不含 ticket_id。"""
 
@@ -94,7 +101,7 @@ class TicketSummary(BaseModel):
     id: int
     title: str
     status: TicketStatus
-    category: str | None
+    category: TicketCategory | None
     created_at: datetime
     updated_at: datetime
 

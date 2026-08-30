@@ -132,3 +132,8 @@
 - **经验**：复用 T-016 `QaPipeline.run`，结果只插入 `suggestions`，不写 `messages`、不 `touch` 工单、不改画像。成功路径 pytest monkeypatch `QaPipeline.run`；降级路径 monkeypatch `EmbeddingClient.embed_texts` 抛错，再断言 `result_type=degraded` 且员工详情消息条数不变。`GET /agent-queue` 仍须写在 `GET /{id}` 之前。前端 `createSuggestion` / `fetchSuggestion` 在 `VITE_USE_MOCK=false` 时已打真实 `POST /tickets/{id}/suggestions`；建议只渲染右栏，`填入输入框` 不自动发送。Key 已配置于 `backend/.env`，`key_configured=True`。
 - **避坑**：不要实现分类/结单（T-022+），不要推倒重写答疑流水线。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要宣称 Chat/Embedding/Rerank 全路径完整联调通过。禁止 dashscope SDK；httpx `trust_env=False`。日志/报告只写 `key_configured=True`，禁止密钥片段。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机质量门用 `.venv` 的 `python`，f009 pytest `--timeout=300`。
 
+### T-022: F-010 工单分类闭环
+- **陷阱**：`GET /api/tickets/agent-queue` 契约没有 `category`，不能为了列表标签给队列条目加字段；`PUT /{id}/category` 必须写在 `GET /{id}` 之前，否则会变成路径参数冲突。
+- **经验**：pending / in_progress 可写分类并 `touch`；同一分类幂等不改 `updated_at`；closed 返回 409「已完结不能改分类」且不改库。成功摘要是 TicketSummary。员工 `GET /mine` 与详情带 `category`，坐席右栏用 select + `.tag-cat`，左侧仅当前选中项用详情里的分类展示标签。`VITE_USE_MOCK=false` 时 `updateTicketCategory` 已打真实 `PUT /tickets/{id}/category`。
+- **避坑**：不要实现结单（T-023）。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要给 agent-queue 发明 `category`。分类枚举只允许 `IT-网络` / `IT-账号` / `行政-工牌` / `行政-场地`。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机质量门用 `.venv` 的 `python`，f010 pytest `--timeout=120`。
+

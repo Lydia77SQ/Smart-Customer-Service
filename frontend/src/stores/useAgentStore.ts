@@ -140,6 +140,10 @@ export const useAgentStore = defineStore('agent', {
     },
     async classify(category: TicketCategory) {
       if (!this.detail) return
+      if (this.detail.status === 'closed') {
+        this.errorMessage = '已完结不能改分类'
+        throw new Error('已完结不能改分类')
+      }
       this.classifying = true
       this.errorMessage = ''
       try {

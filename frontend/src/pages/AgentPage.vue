@@ -203,6 +203,10 @@ onMounted(async () => {
               {{ item.requester.display_name }} · {{ item.title }}
             </span>
             <span class="meta">等待 {{ item.waiting_minutes }} 分钟</span>
+            <span
+              v-if="selected?.id === item.id && selected.category"
+              class="tag tag-cat"
+            >{{ selected.category }}</span>
           </button>
         </div>
       </aside>

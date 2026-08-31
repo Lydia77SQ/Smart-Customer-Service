@@ -72,7 +72,7 @@ class KnowledgeDocumentRepository:
         )
         result = await self.db.execute(
             select(KnowledgeDocument)
-            .order_by(KnowledgeDocument.updated_at.desc(), KnowledgeDocument.id.desc())
+            .order_by(KnowledgeDocument.created_at.asc(), KnowledgeDocument.id.asc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )

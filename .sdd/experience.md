@@ -137,3 +137,29 @@
 - **经验**：pending / in_progress 可写分类并 `touch`；同一分类幂等不改 `updated_at`；closed 返回 409「已完结不能改分类」且不改库。成功摘要是 TicketSummary。员工 `GET /mine` 与详情带 `category`，坐席右栏用 select + `.tag-cat`，左侧仅当前选中项用详情里的分类展示标签。`VITE_USE_MOCK=false` 时 `updateTicketCategory` 已打真实 `PUT /tickets/{id}/category`。
 - **避坑**：不要实现结单（T-023）。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要给 agent-queue 发明 `category`。分类枚举只允许 `IT-网络` / `IT-账号` / `行政-工牌` / `行政-场地`。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机质量门用 `.venv` 的 `python`，f010 pytest `--timeout=120`。
 
+### T-023: F-011 坐席结单闭环
+- **陷阱**：T-022 Tester 已确认 `POST /api/tickets/{id}/close` 是 404；前端 Mock 期 `closeTicket` / 结单按钮 / 双方 Disabled 已在。本任务只补后端 close 与 f011 测试，不要重写分类或坐席页。待处理与 AI 接待中的结单拒绝文案不同（「未接入不能结单」vs「当前状态不可结单」），不要合成一句。
+- **经验**：仅 `in_progress`→`closed` 并 `touch`；已 `closed` 幂等不改 `updated_at`、不插消息。结单后员工 `POST /messages` 与坐席 `POST /agent-replies` 均 409「已完结，不能再发送」。`POST /{id}/close` 必须写在 `GET /{id}` 之前。无 reopen 路由。`VITE_USE_MOCK=false` 时 `closeTicket` 已打真实 `POST /tickets/{id}/close`；坐席页 `.btn-danger`「结束工单」，完结后保留详情以便输入框与发送禁用。
+- **避坑**：不要实现重开（F-016）。不要改 `frontend/.env` 默认 `VITE_USE_MOCK=true`。不要给结单加系统气泡。测试用 `tmp_path` + `dependency_overrides[get_db]`，禁止 `drop_all` 运行时库。本机全局 `python`（3.14）无 ruff/mypy/pytest，质量门用同一解释器加载项目依赖；f011 pytest `--timeout=120`。
+
+### T-024: 全系统 E2E 回归与启动文档
+- **陷阱**：本任务是跨模块回归，不是 T-011～T-023 的替代；主链路 pytest 必须走真实 FastAPI 路由，但不能打真实百炼，否则缺 Key / Rerank 失败会被误当成主链路 FAIL。PowerShell 下 `PYTHONPATH=.. python ...` 无效。全局 `python` 无 ruff/mypy/pytest，需把项目 `.venv/Lib/site-packages` 加入 `PYTHONPATH`，不要用 `.venv\Scripts\python.exe`。
+- **经验**：`backend/tests/e2e` 用独立库 + `dependency_overrides[get_db]` + ASGI `httpx.AsyncClient(trust_env=False)` 覆盖 Plan.md §7：注册/登录/`GET /me` → 上传 Markdown（monkeypatch Embedding）→ 停用不断行/切片 → 再启用 → 员工提问（monkeypatch `QaPipeline.run`）→ 转人工 → 接入 → 建议文本不得出现在员工 `messages` → 回复 → 分类 → 结单 → 双方 409 且无 reopen。`docs/startup.md` 只写字段名与端口 5199/8099、5175/8003，`VITE_USE_MOCK=false` 联调；Key 状态只写 `key_configured=True/False`。前端四页静态无 `[Mock]`，service 已在 `VITE_USE_MOCK=false` 打真实 API，无需重写页面。
+- **避坑**：不要改 PRD / Plan / api-contracts / tasks.json。不要宣称百炼完整联调。不要启动长期 uvicorn/Vite；E2E 用 TestClient 即可。停用知识断言列表仍在且 chunk/qa/原文还在。`.gitignore` 必须排除 `backend/.env`。F-014～F-019 不做。
+
+### Bugfix: 知识开关连动与澄清循环
+- **触发**：启用第二个知识库文档时第一个可能会自动关闭；意图澄清后找不到答案还会一直重复问，找不到答案就说不知道，转人工
+- **根因**：知识开关用原生 change + 列表按 updated_at 重排，行复用可能把错误 checked 打到另一篇；意图分类只看当前短句，未读画像 last_result_type，无知识仍生成
+- **已有经验回查**：有 T-015/T-016 相近条目，无「多文档同时启用」和「澄清只一轮」规则
+- **为什么仍然犯错**：启停只测单篇；答疑把每轮提问当独立句
+- **修复**：开关按行 id 隔离并用该行 status 计算下一态；PATCH 不得改其它文档；澄清后仍 ambiguous 或检索无片段则 degraded（DEGRADED_QA_MESSAGE，不自动转人工）
+- **避坑规则**：F-013 必须覆盖「启用 B 时 A 仍 enabled」。F-004 澄清后不得再发同一反问；无知识不得 generated_answer 空编。转人工仍走员工点击 F-006，答疑只提示。
+
+### Bugfix: 列表顺序、降级文案、换账号清空工作台
+- **触发**：知识列表启停后跳动；找不到答案文案需改为指定句；清掉历史未生效文档；换账号后员工页仍显示上一账号对话
+- **根因**：列表按 updated_at 排序；Pinia 工单 detail 不随登录账号清空；failed/processing 行残留
+- **已有经验回查**：有上一条启停连动、T-017 后端隔离，缺前端换账号重置
+- **为什么仍然犯错**：只修了开关事件，没改排序键；登录只写 token/user
+- **修复**：列表 `created_at, id` 升序；DEGRADED_QA_MESSAGE 改为「很抱歉，您的问题我暂时无法解答，请转人工等待对接人接入」；清理运行时未生效文档；退出/登录/进入员工页 `$reset` 工作台 store
+- **避坑规则**：知识列表排序不得使用会随启停变化的 updated_at。换账号必须重置 ticket/agent/knowledge store，不能只清 localStorage token。
+

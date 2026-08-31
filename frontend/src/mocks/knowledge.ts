@@ -118,7 +118,10 @@ export function mockListKnowledgeDocuments(
   requireUser()
   const safePage = page < 1 ? KNOWLEDGE_LIST_PAGE_DEFAULT : page
   const safeSize = pageSize < 1 ? KNOWLEDGE_LIST_PAGE_SIZE : pageSize
-  const sorted = [...documents].sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1))
+  const sorted = [...documents].sort((a, b) => {
+    if (a.created_at === b.created_at) return a.id - b.id
+    return a.created_at < b.created_at ? -1 : 1
+  })
   const start = (safePage - 1) * safeSize
   const items = sorted.slice(start, start + safeSize).map(toListItem)
   const data: PaginatedKnowledgeDocumentOut = {

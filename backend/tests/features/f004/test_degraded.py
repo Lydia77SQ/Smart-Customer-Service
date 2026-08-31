@@ -69,7 +69,7 @@ async def test_external_unavailable_returns_degraded_message(
     data = response.json()["data"]
     assert data["qa_result_type"] == "degraded"
     assert data["system_message"]["content"] == expected
-    assert data["system_message"]["content"] == "暂时无法自动答疑，请稍后再试，或转人工等待对接人。"
+    assert data["system_message"]["content"] == "很抱歉，您的问题我暂时无法解答，请转人工等待对接人接入"
     assert data["ticket"]["status"] == "ai_assisting"
 
 

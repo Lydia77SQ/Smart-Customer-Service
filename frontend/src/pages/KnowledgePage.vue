@@ -54,16 +54,15 @@ async function onFileChange(event: Event) {
   }
 }
 
-async function onToggle(item: KnowledgeDocumentListItem, event: Event) {
-  const input = event.target as HTMLInputElement
+async function onToggle(item: KnowledgeDocumentListItem) {
   if (!canToggle(item) || knowledgeStore.togglingId === item.id) {
-    input.checked = item.status === 'enabled'
     return
   }
+  const nextEnabled = item.status !== 'enabled'
   try {
-    await knowledgeStore.toggle(item.id, input.checked)
+    await knowledgeStore.toggle(item.id, nextEnabled)
   } catch {
-    input.checked = item.status === 'enabled'
+    /* 列表以 store 中各文档自身 status 为准，不得连动其它行 */
   }
 }
 
@@ -124,12 +123,15 @@ onMounted(async () => {
               </td>
               <td>{{ formatKnowledgeUpdatedAt(item.updated_at) }}</td>
               <td>
-                <label class="switch">
+                <label class="switch" :for="`knowledge-enabled-${item.id}`">
                   <input
+                    :id="`knowledge-enabled-${item.id}`"
+                    :key="`knowledge-enabled-${item.id}-${item.status}`"
+                    :name="`knowledge-enabled-${item.id}`"
                     type="checkbox"
                     :checked="item.status === 'enabled'"
                     :disabled="!canToggle(item) || knowledgeStore.togglingId === item.id"
-                    @change="onToggle(item, $event)"
+                    @click.prevent="onToggle(item)"
                   />
                   <span class="slider"></span>
                 </label>

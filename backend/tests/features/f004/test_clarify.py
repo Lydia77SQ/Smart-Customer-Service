@@ -6,7 +6,7 @@ import pytest
 from httpx import AsyncClient
 
 from src.core.config import get_settings
-from src.services.qa_pipeline import parse_intent_payload
+from src.services.qa_pipeline import last_result_type_from_profile, parse_intent_payload
 
 from .conftest import MESSAGES_PATH
 
@@ -62,3 +62,38 @@ async def test_ambiguous_intent_only_clarifies(
     assert data["system_message"]["content"] == CLARIFY_TEXT
     assert "门户" not in data["system_message"]["content"]
     assert "制度" not in data["system_message"]["content"] or "请补充" in data["system_message"]["content"]
+
+
+def test_last_result_type_from_profile() -> None:
+    assert last_result_type_from_profile("{}") is None
+    assert last_result_type_from_profile('{"last_result_type":"clarification"}') == "clarification"
+
+
+async def test_second_ambiguous_after_clarification_degrades(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("src.services.qa_pipeline.EmbeddingClient.embed_texts", _fake_embed)
+    monkeypatch.setattr("src.services.qa_pipeline.LlmClient.complete", _fake_intent)
+
+    first = await client.post(
+        MESSAGES_PATH,
+        headers=auth_headers,
+        json={"content": "公司 VPN 连不上，提示认证失败。", "ticket_id": None},
+    )
+    assert first.status_code == 200
+    ticket_id = first.json()["data"]["ticket"]["id"]
+    assert first.json()["data"]["qa_result_type"] == "clarification"
+
+    second = await client.post(
+        MESSAGES_PATH,
+        headers=auth_headers,
+        json={"content": "Windows，今天开始。", "ticket_id": ticket_id},
+    )
+    assert second.status_code == 200
+    data = second.json()["data"]
+    assert data["qa_result_type"] == "degraded"
+    assert data["system_message"]["content"] == get_settings().degraded_qa_message
+    assert data["system_message"]["content"] != CLARIFY_TEXT
+

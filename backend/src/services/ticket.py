@@ -1,4 +1,4 @@
-"""员工发消息、答疑、转人工、坐席队列、接入、回复、智能建议与分类。"""
+"""员工发消息、答疑、转人工、坐席队列、接入、回复、智能建议、分类与结单。"""
 
 from __future__ import annotations
 
@@ -34,6 +34,8 @@ _ACCEPT_CONFLICT_MESSAGE = "当前状态不可接入"
 _NEED_ACCEPT_MESSAGE = "请先接入后再回复"
 _SUGGEST_CONFLICT_MESSAGE = "仅处理中可获取建议"
 _CLOSED_CATEGORY_MESSAGE = "已完结不能改分类"
+_NEED_ACCEPT_CLOSE_MESSAGE = "未接入不能结单"
+_CLOSE_CONFLICT_MESSAGE = "当前状态不可结单"
 _ALLOWED_CATEGORIES = frozenset({"IT-网络", "IT-账号", "行政-工牌", "行政-场地"})
 _AI_ASSISTING = "ai_assisting"
 _PENDING = "pending"
@@ -303,6 +305,19 @@ class TicketService:
         ticket.category = category
         ticket = await self.tickets.touch(ticket)
         logger.info("工单已分类", ticket_id=ticket.id)
+        return self.to_summary(ticket)
+
+    async def close_ticket(self, user: Account, ticket_id: int) -> TicketSummary:
+        ticket = await self._visible_ticket(user, ticket_id)
+        if ticket.status == _CLOSED:
+            return self.to_summary(ticket)
+        if ticket.status == _PENDING:
+            raise TicketConflictError(_NEED_ACCEPT_CLOSE_MESSAGE)
+        if ticket.status != _IN_PROGRESS:
+            raise TicketConflictError(_CLOSE_CONFLICT_MESSAGE)
+        ticket.status = _CLOSED
+        ticket = await self.tickets.touch(ticket)
+        logger.info("工单已结单", ticket_id=ticket.id)
         return self.to_summary(ticket)
 
     async def _own_ticket(self, user: Account, ticket_id: int) -> Ticket:

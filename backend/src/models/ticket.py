@@ -1,4 +1,4 @@
-"""咨询工单 Pydantic 模型，对齐 docs/api-contracts.md API-F004～API-F010。"""
+"""咨询工单 Pydantic 模型，对齐 docs/api-contracts.md API-F004～API-F011。"""
 
 from __future__ import annotations
 

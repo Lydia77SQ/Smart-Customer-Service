@@ -27,7 +27,8 @@ _INTENT_JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 _INTENT_SYSTEM = (
     "你是企业内部 IT/行政客服的意图分类器。"
-    "判断员工问题是否信息充足、能否检索制度作答。"
+    "结合最近对话判断当前问题是否信息充足、能否检索制度作答。"
+    "员工对上一轮反问的补充（如系统、地点、时间）应判为 clear，不要因短句再次反问。"
     "只输出 JSON，不要其它文字。格式二选一："
     '{"intent":"clear"} 或 {"intent":"ambiguous","question":"请补充……"}。'
     "缺少系统、地点、时间、对象等关键约束，或问题过于宽泛时判为 ambiguous。"
@@ -46,6 +47,7 @@ _GENERATE_SYSTEM = (
 )
 
 _CLARIFY_FALLBACK = "请补充更多细节，以便为你查找制度。"
+_INTENT_USER_TEMPLATE = "最近对话：{history}\n当前问题：{query}"
 
 
 @dataclass(frozen=True)
@@ -101,6 +103,20 @@ def parse_intent_payload(raw: str) -> tuple[str, str | None]:
     if intent == "clear":
         return "clear", None
     raise LlmError("意图识别结果无效")
+
+
+def last_result_type_from_profile(profile_json: str) -> str | None:
+    """读取上一轮答疑路径，避免澄清后用无上下文的短回复再次反问。"""
+    try:
+        data = json.loads(profile_json or "{}")
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    value = data.get("last_result_type")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
 
 
 def apply_profile_rules(profile_json: str, query: str, result_type: str) -> str:
@@ -177,8 +193,11 @@ class QaPipeline:
         if direct is not None:
             return direct
 
-        intent, clarify = await self._classify_intent(query)
+        last_type = last_result_type_from_profile(profile_json)
+        intent, clarify = await self._classify_intent(query, recent_messages)
         if intent == "ambiguous":
+            if last_type == "clarification":
+                return QaResult("degraded", settings.degraded_qa_message)
             return QaResult("clarification", clarify or _CLARIFY_FALLBACK)
 
         rewritten = await self._rewrite_query(
@@ -189,8 +208,7 @@ class QaPipeline:
         rewritten_vector = (await self.embedding.embed_texts([rewritten]))[0]
         snippets = await self._hybrid_retrieve(rewritten, rewritten_vector)
         if not snippets:
-            answer = await self._generate(rewritten, [])
-            return QaResult("generated_answer", answer)
+            return QaResult("degraded", settings.degraded_qa_message)
         reranked = await self.rerank.rerank(
             rewritten,
             snippets,
@@ -217,12 +235,21 @@ class QaPipeline:
             return QaResult("direct_answer", best[1].answer)
         return None
 
-    async def _classify_intent(self, query: str) -> tuple[str, str | None]:
+    async def _classify_intent(
+        self, query: str, recent_messages: list[Message]
+    ) -> tuple[str, str | None]:
         settings = get_settings()
+        history = _recent_dialogue(recent_messages, settings.short_term_memory_rounds)
         raw = await self.llm.complete(
             [
                 {"role": "system", "content": _INTENT_SYSTEM},
-                {"role": "user", "content": query},
+                {
+                    "role": "user",
+                    "content": _INTENT_USER_TEMPLATE.format(
+                        history=history or "（无）",
+                        query=query,
+                    ),
+                },
             ],
             temperature=settings.llm_temperature_intent,
         )

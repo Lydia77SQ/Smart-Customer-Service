@@ -103,6 +103,7 @@ watch(
 )
 
 onMounted(async () => {
+  ticketStore.$reset()
   try {
     await ticketStore.loadMine()
     const first = ticketStore.items[0]

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { logout } from '@/services/authService'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { resetWorkspaceStores } from '@/stores/resetWorkspace'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -15,6 +16,7 @@ async function onLogout() {
     /* 仍退出本地会话 */
   }
   authStore.clearSession()
+  resetWorkspaceStores()
   await router.push('/login')
 }
 </script>

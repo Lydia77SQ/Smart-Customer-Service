@@ -1,4 +1,4 @@
-"""咨询工单资源路由。API-F004 发消息；API-F005 列表详情；API-F006 转人工；API-F007 队列与接入；API-F008 坐席回复；API-F009 智能建议；API-F010 分类。"""
+"""咨询工单资源路由。API-F004 发消息；API-F005 列表详情；API-F006 转人工；API-F007 队列与接入；API-F008 坐席回复；API-F009 智能建议；API-F010 分类；API-F011 结单。"""
 
 from typing import Annotated, Literal
 
@@ -166,6 +166,17 @@ async def update_ticket_category(
         ticket_id,
         category=body.category,
     )
+    return contract_success_response(summary.model_dump(mode="json"))
+
+
+@router.post("/{ticket_id}/close")
+async def close_ticket(
+    ticket_id: int,
+    current: Account = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """API-F011-01：处理中 → 已完结；已完结幂等；待处理 CONFLICT。"""
+    summary = await _ticket_service(db).close_ticket(current, ticket_id)
     return contract_success_response(summary.model_dump(mode="json"))
 
 

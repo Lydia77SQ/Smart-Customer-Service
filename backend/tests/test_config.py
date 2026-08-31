@@ -44,7 +44,7 @@ def test_default_port_and_host(tmp_path: Path) -> None:
 
 def test_default_degraded_messages(tmp_path: Path) -> None:
     settings = load_settings(_write_env(tmp_path, _MINIMAL_ENV))
-    assert settings.degraded_qa_message == "暂时无法自动答疑，请稍后再试，或转人工等待对接人。"
+    assert settings.degraded_qa_message == "很抱歉，您的问题我暂时无法解答，请转人工等待对接人接入"
     assert settings.degraded_suggestion_message == (
         "暂时无法生成建议。请手写回复，不要向员工发送自动消息。"
     )

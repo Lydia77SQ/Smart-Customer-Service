@@ -293,3 +293,67 @@ async def test_processing_document_cannot_toggle(
     listed = await client.get(LIST_PATH, headers=auth_headers)
     items = listed.json()["data"]["items"]
     assert any(item["id"] == document_id and item["status"] == "processing" for item in items)
+
+
+async def test_enable_second_keeps_first_enabled(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = await _upload_enabled(client, auth_headers, monkeypatch, filename="文档甲.md")
+    second = await _upload_enabled(client, auth_headers, monkeypatch, filename="文档乙.md")
+    first_id = int(first["id"])
+    second_id = int(second["id"])
+
+    disabled = await client.patch(
+        _patch_path(second_id),
+        headers=auth_headers,
+        json={"enabled": False},
+    )
+    assert disabled.json()["data"]["status"] == "disabled"
+
+    listed = await client.get(LIST_PATH, headers=auth_headers)
+    by_id = {item["id"]: item["status"] for item in listed.json()["data"]["items"]}
+    assert by_id[first_id] == "enabled"
+    assert by_id[second_id] == "disabled"
+
+    enabled = await client.patch(
+        _patch_path(second_id),
+        headers=auth_headers,
+        json={"enabled": True},
+    )
+    assert enabled.status_code == 200
+    assert enabled.json()["data"]["status"] == "enabled"
+    assert enabled.json()["data"]["id"] == second_id
+
+    listed_after = await client.get(LIST_PATH, headers=auth_headers)
+    by_id_after = {item["id"]: item["status"] for item in listed_after.json()["data"]["items"]}
+    assert by_id_after[first_id] == "enabled"
+    assert by_id_after[second_id] == "enabled"
+
+
+async def test_list_order_stays_by_created_at_after_toggle(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = await _upload_enabled(client, auth_headers, monkeypatch, filename="文档甲.md")
+    second = await _upload_enabled(client, auth_headers, monkeypatch, filename="文档乙.md")
+    first_id = int(first["id"])
+    second_id = int(second["id"])
+
+    before = await client.get(LIST_PATH, headers=auth_headers)
+    order_before = [item["id"] for item in before.json()["data"]["items"]]
+    assert order_before == [first_id, second_id]
+
+    toggled = await client.patch(
+        _patch_path(second_id),
+        headers=auth_headers,
+        json={"enabled": False},
+    )
+    assert toggled.status_code == 200
+
+    after = await client.get(LIST_PATH, headers=auth_headers)
+    order_after = [item["id"] for item in after.json()["data"]["items"]]
+    assert order_after == [first_id, second_id]
+

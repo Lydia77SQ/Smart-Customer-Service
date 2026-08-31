@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { login, register } from '@/services/authService'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { resetWorkspaceStores } from '@/stores/resetWorkspace'
 import { getApiErrorCode, getApiErrorMessage } from '@/utils/error'
 
 type TabId = 'login' | 'register'
@@ -90,6 +91,7 @@ async function onLoginSubmit() {
       password: loginPassword.value,
     })
     authStore.setSession(session.token, session.user)
+    resetWorkspaceStores()
     await router.push('/employee')
   } catch (error) {
     const code = getApiErrorCode(error)

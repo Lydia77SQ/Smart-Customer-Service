@@ -121,7 +121,7 @@ class AppSettings(BaseSettings):
     rerank_model: str = "gte-rerank"
     rerank_timeout_seconds: int = 30
     http_client_trust_env: bool = False
-    degraded_qa_message: str = "暂时无法自动答疑，请稍后再试，或转人工等待对接人。"
+    degraded_qa_message: str = "很抱歉，您的问题我暂时无法解答，请转人工等待对接人接入"
     degraded_suggestion_message: str = (
         "暂时无法生成建议。请手写回复，不要向员工发送自动消息。"
     )

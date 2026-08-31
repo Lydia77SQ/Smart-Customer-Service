@@ -141,7 +141,7 @@ async def _fake_generated_llm(
     return "当前知识不足以作答，请转人工或补充描述。"
 
 
-async def test_clear_intent_without_knowledge_generates(
+async def test_clear_intent_without_knowledge_degrades(
     client: AsyncClient,
     auth_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
@@ -156,8 +156,8 @@ async def test_clear_intent_without_knowledge_generates(
     )
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["qa_result_type"] == "generated_answer"
-    assert data["system_message"]["content"] == "当前知识不足以作答，请转人工或补充描述。"
+    assert data["qa_result_type"] == "degraded"
+    assert data["system_message"]["content"] == get_settings().degraded_qa_message
 
 
 async def test_unknown_ticket_not_found(

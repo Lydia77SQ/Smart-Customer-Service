@@ -162,6 +162,7 @@ class KnowledgeService:
         return await self.documents.list_enabled_ids()
 
     async def toggle(self, document_id: int, enabled: bool) -> KnowledgeDocumentOut:
+        """只改当前文档 enabled⇄disabled；不得把其它文档改成停用。"""
         document = await self.documents.get_by_id(document_id)
         if document is None:
             raise KnowledgeNotFoundError()
@@ -172,7 +173,7 @@ class KnowledgeService:
             return self.to_out(document)
         document = await self.documents.mark_status(document, target)
         logger.info(
-            "知识文档启停已更新，切片与原文未删除",
+            "知识文档启停已更新，切片与原文未删除，未改动其它文档",
             document_id=document.id,
             status=document.status,
         )

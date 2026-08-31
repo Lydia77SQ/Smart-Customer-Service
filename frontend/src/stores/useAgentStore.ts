@@ -159,6 +159,14 @@ export const useAgentStore = defineStore('agent', {
     },
     async close() {
       if (!this.detail) return
+      if (this.detail.status === 'pending') {
+        this.errorMessage = '未接入不能结单'
+        throw new Error('未接入不能结单')
+      }
+      if (this.detail.status !== 'in_progress' && this.detail.status !== 'closed') {
+        this.errorMessage = '当前状态不可结单'
+        throw new Error('当前状态不可结单')
+      }
       this.closing = true
       this.errorMessage = ''
       try {
